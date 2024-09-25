@@ -38,53 +38,148 @@ SQL Server is used to combine the various datasets into one dataset and clean it
 Reason:  
 A worksheet can only have 1,048,576 rows in Microsoft Excel because of its inability to manage large amounts of data. Because the Cyclistic dataset has more than 5.6 million rows, it is essential to use a platform like SQL Server that supports huge volumes of data.
 ### Combining the Data
-SQL Server Query: [Data Combining](https://github.com/SomiaNasir/Google-Data-Analytics-Capstone-Cyclistic-Case-Study/blob/main/01.%20Data%20Combining.sql)  
-12 csv files are uploaded as tables in the dataset 'Cyclistic'. Another table named "last_12month_report" is created, containing 5,743,202 rows of data for the entire year. 
+SQL Server Query:
+```
+--combine all table to main table called last_12month_report--
+--- Note: When we use union we can also remove duplicated values---
+select * into last_12month_report
+from (
+select * from april_2024
+union                       ---when we use union we can also remove duplicated values---
+select * from aug_2024
+union 
+select * from dec_2023
+union 
+select * from feb_2024
+union 
+select * from jan_2024
+union 
+select * from jul_2024
+union 
+select * from jun_2024
+union 
+select * from mar_2024
+union 
+select * from may_2024
+union 
+select * from nov_2023
+union 
+select * from oct_2023
+union 
+select * from sep_2023
+) A 
+
+```
+
+12 csv files are uploaded as tables in the dataset 'Cyclistic'. Another table named "last_12month_report" is created, containing 5,743,202 rows of data (with on duplicate values) for the entire year. 
 ### Data Exploration
-SQL Server Query: [Data Exploration](https://github.com/SomiaNasir/Google-Data-Analytics-Capstone-Cyclistic-Case-Study/blob/main/02.%20Data%20Exploration.sql)  
+SQL Server Query: 
+```
+selesct * from  last_12month_report;
+```
 Before cleaning the data, I am familiarizing myself with the data to find the inconsistencies.  
 
 Observations:  
-1. The table below shows the all column names and their data types. The __ride_id__ column is our primary key.  
+1. The table below shows the all column names and their data types.
 
-   ![image](https://user-images.githubusercontent.com/125132307/226139161-c5209861-7542-4ad6-8d9a-ce0115086e4d.png)  
+   ![image](https://user-images.githubusercontent.com/125132307/226139161-c5209861-7542-4ad6-8d9a-ce0115086e4d.png)  ???
 
-2. The following table shows number of __null values__ in each column.  
+3. The following table shows number of __null values__ in each column.
+    SQL server Query:
+
+```
+SELECT COUNT(*) - COUNT(ride_id) ride_id,
+ COUNT(*) - COUNT(rideable_type) rideable_type,
+ COUNT(*) - COUNT(started_at) started_at,
+ COUNT(*) - COUNT(ended_at) ended_at,
+ COUNT(*) - COUNT(start_station_name) start_station_name,
+ COUNT(*) - COUNT(start_station_id) start_station_id,
+ COUNT(*) - COUNT(end_station_name) end_station_name,
+ COUNT(*) - COUNT(end_station_id) end_station_id,
+ COUNT(*) - COUNT(start_lat) start_lat,
+ COUNT(*) - COUNT(start_lng) start_lng,
+ COUNT(*) - COUNT(end_lat) end_lat,
+ COUNT(*) - COUNT(end_lng) end_lng,
+ COUNT(*) - COUNT(member_casual) member_casual
+FROM `2022_tripdata.combined_data`;
+``` 
    
-   ![image](https://user-images.githubusercontent.com/125132307/226182623-1f3378b1-c4b2-403e-8a41-7916aacd3666.png)
+   ![image](https://github.com/user-attachments/assets/67170da5-8ed2-43e0-9a62-290aba63a2eb).png) 
 
-   Note that some columns have same number of missing values. This may be due to missing information in the same row i.e. station's name and id for the same station and latitude and longitude for the same ending station.  
-3. As ride_id has no null values, let's use it to check for duplicates.  
+   Note that some columns have same number of missing values. This may be due to missing information in the same row i.e. station's name and id for the same station 
+   and latitude and longitude for the same ending station.  
+5. As ride_id has no null values, let's use it to check for length.
+SQL server Query: 
+```
+SELECT LEN(ride_id) as length_ride_id, COUNT(ride_id) AS no_of_rows
+FROM last_12month_report
+GROUP BY LEN(ride_id);
+  ```
+   ![image](https://github.com/user-attachments/assets/43dcd3f3-1707-4432-9d9e-1c20fc0d759c.png)???
 
-   ![image](https://user-images.githubusercontent.com/125132307/226181500-38f9b3ca-811d-4612-87ea-87b6d1d3843e.png)
-
-   There are no __duplicate__ rows in the data.  
-   
-4. All __ride_id__ values have length of 16 so no need to clean it.
-5. There are 3 unique types of bikes(__rideable_type__) in our data.
-
-   ![image](https://user-images.githubusercontent.com/125132307/226203372-10c60802-0880-4b17-9ac0-2177ab862974.png)
-
-6. The __started_at__ and __ended_at__ shows start and end time of the trip in YYYY-MM-DD hh:mm:ss UTC format. New column ride_length can be created to find the total trip duration. There are 5360 trips which has duration longer than a day and 122283 trips having less than a minute duration or having end time earlier than start time so need to remove them. Other columns day_of_week and month can also be helpful in analysis of trips at different times in a year.
-7. Total of 833064 rows have both __start_station_name__ and __start_station_id__ missing which needs to be removed.  
-8. Total of 892742 rows have both __end_station_name__ and __end_station_id__ missing which needs to be removed.
-9. Total of 5858 rows have both __end_lat__ and __end_lng__ missing which needs to be removed.
-10. __member_casual__ column has 2 uniqued values as member or casual rider.
-
-    ![image](https://user-images.githubusercontent.com/125132307/226212522-aec43490-5d86-4e2e-a92e-b3bf52050415.png)
-
-11. Columns that need to be removed are start_station_id and end_station_id as they do not add value to analysis of our current problem. Longitude and latitude location columns may not be used in analysis but can be used to visualise a map.
+  We have 3865 rows in ride_id which has less than 16. We should remove.
+8. The __started_at__ and __ended_at__ shows start and end time of the trip in YYYY-MM-DD hh:mm:ss datetime2 format. New column ride_length can be created to find the total trip duration. There are trips which has duration longer than a day and other trips having less than a minute duration or having end time earlier than start time so need to remove them. Other columns weekday , time of day and seaosn can also be helpful in analysis of trips at different times in a year.
 
 ### Data Cleaning
-SQL Query: [Data Cleaning](https://github.com/SomiaNasir/Google-Data-Analytics-Capstone-Cyclistic-Case-Study/blob/main/03.%20Data%20Cleaning.sql)  
+
 1. All the rows having missing values are deleted.  
-2. 3 more columns ride_length for duration of the trip, day_of_week and month are added.  
+2. 4 more columns ride_length for duration of the trip, weekday, time of day and season are added.  
 3. Trips with duration less than a minute and longer than a day are excluded.
-4. Total 1,375,912 rows are removed in this step.
+4. Total 1,706,118 rows are removed in this step.
   
 ## Analyze and Share
-SQL Query: [Data Analysis](https://github.com/SomiaNasir/Google-Data-Analytics-Capstone-Cyclistic-Case-Study/blob/main/04.%20Data%20Analysis.sql)  
-Data Visualization: [Tableau](https://public.tableau.com/app/profile/somia.nasir/viz/bike-tripdata-casestudy/Dashboard1#1)  
+SQL  Server Query:
+```
+
+	---- Avg Rides_length by user_type ----
+Select user_type  , avg(ride_length) AS "average of trip"
+from final_table
+group by  user_type  ;
+
+	---- Avg Rides_length by bike-type ----
+Select  bike_type,avg(ride_length) AS "average of trip"
+from final_table
+group by bike_type;
+
+                                                  ----Rides per month----
+ select count(*) as no_of_rides,DATENAME(month,started_at)+ '  ' + CAST(datepart(year,started_at)as varchar) as year_month from final_table
+ group by DATENAME(month,started_at)+ ' '+ CAST(datepart(year,started_at)as varchar) 
+ order by 1
+ 
+ 
+                                                    -----RIDES BY SEASON------
+ SELECT distinct DATENAME(month,started_at) as Month,count(started_at) as number_of_rides, user_type,season
+  group by DATENAME(month,started_at), user_type, season 
+					 
+
+
+					 ------RIDES BY day of week------
+	Select weekday,bike_type,member_casual, count(weekday) as number_of_rides
+              from final_table
+	group by weekday, bike_type, user_type
+	order by 1 
+
+
+                                        ------RIDES BY TIME OF DAY AND WEEKDAY ----------
+
+Select   weekday, count(weekday) as number_of_rides, user_type,time_of_day
+from final_table
+group by weekday , user_type, time_of_day;
+order by weekday 
+
+				---------- RIDES BY MONTH AND TIME--------------
+Select  DATENAME(mm,started_at) as Month_name, count(weekday) as number_of_rides, user_type,Time_of_day
+from final_table
+group by DATENAME(mm,started_at), user_type, Time_of_day
+order by Month_name
+
+
+-	                                   ----RIDES BY BIKE_TYPE AND USER_TYPE------
+select user_type,count(ride_id) as number_of_rides,bike_type 
+from final_table
+group by user_type, bike_type
+```
+Data Visualization: [Tableau](https://public.tableau.com/views/CasestudyundercapstoneprojectofGoogleDataAnalyticsCertificate/Totalrides?:language=en-GB&:sid=&:redirect=auth&:display_count=n&:origin=viz_share_link)  
 The data is stored appropriately and is now prepared for analysis. I queried multiple relevant tables for the analysis and visualized them in Tableau.  
 The analysis question is: How do annual members and casual riders use Cyclistic bikes differently?  
 
